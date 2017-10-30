@@ -1,2 +1,2 @@
-all: wade.c
-	gcc -o wade wade.c -lpthread -Wall -I.
+all: wave.c
+	gcc -o wave wave.c -lpthread -Wall -I.
