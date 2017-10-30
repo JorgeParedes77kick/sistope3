@@ -21,9 +21,22 @@ typedef struct hebra
 	
 }hebra;
 
+/*
+typedef struct hebraDos
+{
+	int id;
+	int iteracion;
+	int filaInicial;
+	int filaFinal;
+	
+} hebraDos;
+*/
+
 //Globales
 float*** matriz;
 pthread_t* threads;
+
+//hebraDos** hebrasDos;
 
 pthread_mutex_t* locks;
 
@@ -70,7 +83,12 @@ void imprimirTraza(float*** matriz, int N, int T)
 	}
 	//printf("Fin imprimirTraza\n");
 }
-
+/*
+void imprimirHebraDos(hebraDos* heb)
+{
+	printf("ID: %d, Inicio: %d, Fin: %d\n", heb->id, heb->filaInicial, heb->filaFinal);
+}
+*/
 float *** crearBaseMatrizSinHebras(int N, int t)
 {
 	//printf("Inicio crearBaseMatrizSinHebras\n");
@@ -152,6 +170,37 @@ void* rellenar(void* thread)
 	return a;
 }
 
+/*
+void* rellenarPorHebra(void* h)
+{
+	int idHebra = (int) h;
+
+	imprimirHebraDos(hebrasDos[idHebra]);
+
+	int i, j;
+
+	for(i = hebrasDos[idHebra]->filaInicial; i<hebrasDos[idHebra]->filaFinal; i++)
+	{
+		for(j=0; j<NtamanioGrilla; j++)
+		{
+			if(i==0 || j==0 || i==NtamanioGrilla-1 || j==NtamanioGrilla-1)
+			{
+				matriz[i][j][hebrasDos[idHebra]->iteracion] = 0;
+			}
+			else if(hebrasDos[idHebra]->iteracion==1)
+			{	
+				matriz[i][j][hebrasDos[idHebra]->iteracion] = matriz[i][j][0] + ((Ccuadrado*DtDdcuadrado)/2)*(matriz[i+1][j][0] + matriz[i-1][j][0]+ matriz[i][j+1][0] + matriz[i][j-1][0]);
+			}
+			else
+			{
+				matriz[i][j][hebrasDos[idHebra]->iteracion] = matriz[i][j][hebrasDos[idHebra]->iteracion-1]-matriz[i][j][hebrasDos[idHebra]->iteracion-2] + (Ccuadrado*DtDdcuadrado)*(matriz[i+1][j][hebrasDos[idHebra]->iteracion-1] + matriz[i-1][j][hebrasDos[idHebra]->iteracion-1]+ matriz[i][j+1][hebrasDos[idHebra]->iteracion-1] + matriz[i][j-1][hebrasDos[idHebra]->iteracion-1] - 4*matriz[i][j][hebrasDos[idHebra]->iteracion-1]);
+			}
+		}
+	}
+
+}
+*/
+
 hebra** asignarVariables(int N, hebra** hebras, int cantH)
 {
 	//printf("Inicio asignarVariables\n");
@@ -185,6 +234,28 @@ hebra** asignarVariables(int N, hebra** hebras, int cantH)
 	return hebras;
 }
 
+/*
+void asignarValoresHebra(int N, hebraDos** hebras, int H)
+{
+	int i;
+	int div = N/H;
+	int resto = N%H;
+
+	for(i=0; i<H-1; i++)
+	{
+		hebras[i] = calloc(1, sizeof(hebraDos));
+		hebras[i]->id = i;
+		hebras[i]->filaInicial = div*i;
+		hebras[i]->filaFinal = div*(i+1);
+	}
+	//printf(">>>>> I: %d\n", i);
+	
+	hebras[H-1] = calloc(1, sizeof(hebraDos));
+	hebras[i]->id = i;
+	hebras[i]->filaInicial = div*i;
+	hebras[i]->filaFinal = div*(i+1)+resto;
+}
+*/
 
 void crearSalida(float*** matriz, int N, int t)
 {
@@ -282,23 +353,41 @@ int main(int argc, char **argv)
 	hebra** hebras = (hebra**)calloc(HNumeroHebras,sizeof(hebra*));
 	hebras = asignarVariables(NtamanioGrilla,hebras,HNumeroHebras);
 
+	//hebrasDos = (hebraDos**) calloc(HNumeroHebras, sizeof(hebraDos*));
+	//asignarValoresHebra(NtamanioGrilla, hebrasDos, HNumeroHebras);
+
 	threads = (pthread_t*) calloc(HNumeroHebras, sizeof(pthread_t));
 
+	/*
+	int k, h;
+
+	for(k=0; k<TnumeroPasos; k++)
+	{
+		for(h=0; h<HNumeroHebras; h++)
+		{
+			hebrasDos[h]->iteracion = k;
+			pthread_create(&threads[h], NULL, rellenarPorHebra, (void*)h);
+		}
+	}
+	*/
+	
 	for(t=1;t<TnumeroPasos;t++)
 	{
 		for(i=0; i<HNumeroHebras; i++)
 		{
-			//pthread_join(threads[i], &ptr);
+			pthread_join(threads[i], &ptr);
 			hebras[i]->t=t;
 			pthread_create(&threads[i], NULL,rellenar,(void*)hebras[i]);
-		}
-		for(i=0; i<HNumeroHebras; i++)
-		{	
-			pthread_join(threads[i], &ptr);
 		}
 	}
 	
 	//Retorno del join
+	for(i=0; i<HNumeroHebras; i++)
+	{	
+		pthread_join(threads[i], &ptr);
+	}
+	
+
 	imprimirTraza(matriz, NtamanioGrilla, TnumeroPasos);
 	imprimirSalida(matriz, NtamanioGrilla, tIteracionSalida);
 
