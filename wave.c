@@ -287,15 +287,17 @@ int main(int argc, char **argv)
 	for(t=1;t<TnumeroPasos;t++)
 	{
 		for(i=0; i<HNumeroHebras; i++)
+		{	
+			pthread_join(threads[i], &ptr);
+		}
+		
+		for(i=0; i<HNumeroHebras; i++)
 		{
 			//pthread_join(threads[i], &ptr);
 			hebras[i]->t=t;
 			pthread_create(&threads[i], NULL,rellenar,(void*)hebras[i]);
 		}
-		for(i=0; i<HNumeroHebras; i++)
-		{	
-			pthread_join(threads[i], &ptr);
-		}
+		
 	}
 	
 	//Retorno del join
