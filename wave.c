@@ -9,7 +9,6 @@
 #define Ccuadrado 1.0
 #define DtDdcuadrado 0.0025
 
-
 typedef struct hebra
 {
 	int id;
@@ -25,7 +24,11 @@ typedef struct hebra
 float*** matriz;
 pthread_t* threads;
 
-pthread_mutex_t* locks;
+clock_t tiempoInicio, tiempoFinal;
+double tiempoPrograma;
+
+clock_t tiempoInicioHebras, tiempoFinalHebras;
+double tiempoHebras;
 
 int NtamanioGrilla = 0;
 int TnumeroPasos = 0;
@@ -99,7 +102,7 @@ float *** crearBaseMatrizSinHebras(int N, int t)
 	{
 		for(j=(int)valueA+aux;j<(int)valueB;j++)
 		{
-			printf("%d %d\n",i,j );
+			//printf("%d %d\n",i,j );
 			matriz[i][j][0]=20;
 		}
 	}
@@ -109,7 +112,6 @@ float *** crearBaseMatrizSinHebras(int N, int t)
 
 }
 
-
 void imprimirHebra(hebra * thread)
 {
 	//printf("Inicio imprimirHebra\n");
@@ -117,14 +119,12 @@ void imprimirHebra(hebra * thread)
 	//printf("Fin imprimirHebra\n");
 }
 
-
-
 void* rellenar(void* thread)
 {
 	//printf("Inicio rellenar\n");
 	hebra* laHebra = (hebra*) thread;
 
-	imprimirHebra(laHebra);
+	//imprimirHebra(laHebra);
 
 	int k = laHebra->t;
 	int i, j;
@@ -147,9 +147,7 @@ void* rellenar(void* thread)
 			}
 		}
 	}
-	void * a = NULL;
-	//printf("Fin rellenar\n");
-	return a;
+	pthread_exit(NULL);
 }
 
 hebra** asignarVariables(int N, hebra** hebras, int cantH)
@@ -207,9 +205,10 @@ void crearSalida(float*** matriz, int N, int t)
 	//printf("Fin crearSalida\n");
 }
 
-
 int main(int argc, char **argv)
 {
+	tiempoInicio = clock();
+
 	int c;
 	/*if(argc!=10){
 		if(argc>10){
@@ -272,17 +271,52 @@ int main(int argc, char **argv)
         	default:
         	abort();
 		}
+	}
 
+	tIteracionSalida--;
+
+	if(NtamanioGrilla < 128 || NtamanioGrilla > 256)
+	{
+		printf("El tamano de la grilla debe ser entre 128 y 256\n");
+		return 1;
+	}
+	if(HNumeroHebras<=0 || HNumeroHebras > 14)
+	{
+		printf("La cantidad de hebras debe ser mayor a 0 y menor a 14\n");
+		return 1;
+	}
+	if(TnumeroPasos<= 0 || TnumeroPasos > 8000)
+	{
+		printf("El numero de pasos debe ser mayor a 0 y menor a 8000\n");
+		return 1;
+	}
+	if(fNombreArchivoSalida == NULL)
+	{
+		printf("Falta el nombre del archivo de salida\n");
+		return 1;
+	}
+	if(tIteracionSalida < 0)
+	{
+		printf("La iteracion de salida no debe ser menor a 0\n");
+		return 1;
+	}
+	if(tIteracionSalida >= TnumeroPasos)
+	{
+		printf("La iteracion de salida no puede ser mayor al numero de pasos\n");
+		return 1;
 	}
 
 	int i, t;
 	void * ptr = NULL;
+
 	matriz = crearBaseMatrizSinHebras(NtamanioGrilla,TnumeroPasos);
 	
 	hebra** hebras = (hebra**)calloc(HNumeroHebras,sizeof(hebra*));
 	hebras = asignarVariables(NtamanioGrilla,hebras,HNumeroHebras);
 
 	threads = (pthread_t*) calloc(HNumeroHebras, sizeof(pthread_t));
+
+	tiempoInicioHebras = clock();
 
 	for(t=1;t<TnumeroPasos;t++)
 	{
@@ -297,14 +331,18 @@ int main(int argc, char **argv)
 			hebras[i]->t=t;
 			pthread_create(&threads[i], NULL,rellenar,(void*)hebras[i]);
 		}
-		
 	}
-	
-	//Retorno del join
-	imprimirTraza(matriz, NtamanioGrilla, TnumeroPasos);
-	imprimirSalida(matriz, NtamanioGrilla, tIteracionSalida);
 
+	tiempoFinalHebras = clock();
+
+	imprimirSalida(matriz, NtamanioGrilla, tIteracionSalida);
 	crearSalida(matriz, NtamanioGrilla, tIteracionSalida);
+
+	tiempoFinal = clock();
+	tiempoPrograma = (double)(tiempoFinal - tiempoInicio)/CLOCKS_PER_SEC;
+	tiempoHebras = (double)(tiempoFinalHebras - tiempoInicioHebras)/CLOCKS_PER_SEC;
+	printf("> TIEMPO EJECUCION PROGRAMA: %f\n", tiempoPrograma);
+	printf("> TIEMPO EJECUCION HEBRAS: %f\n", tiempoHebras); 
 
 	return 0;
 }
