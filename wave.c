@@ -42,7 +42,7 @@ void imprimirSalida(float*** matriz, int N, int t)
 	{
 		for(j=0; j<N; j++)
 		{
-			printf("%.10f ", matriz[i][j][t]);
+			printf("%.10f ", matriz[t][i][j]);
 		}
 		printf("\n");
 	}
@@ -62,7 +62,7 @@ void imprimirTraza(float*** matriz, int N, int T)
 			{
 				for (j=0; j<N; ++j)
 				{
-					printf("%.10f ", matriz[i][j][k]);
+					printf("%.10f ", matriz[k][i][j]);
 				}
 				printf("\n");
 			}
@@ -74,7 +74,7 @@ void imprimirTraza(float*** matriz, int N, int T)
 float *** crearBaseMatrizSinHebras(int N, int t)
 {
 	//printf("Inicio crearBaseMatrizSinHebras\n");
-	float *** matriz = (float ***)calloc(N,sizeof(float**));
+	/*float *** matriz = (float ***)calloc(N,sizeof(float**));
 	int i,j;
 	for (i=0; i<N; ++i)
 	{
@@ -83,8 +83,22 @@ float *** crearBaseMatrizSinHebras(int N, int t)
 		{
 			matriz[i][j] = (float *)calloc(t,sizeof(float));
 		}
-	}
+	}*/
 	
+	//con esto significa que la matriz ahora es t,i,j
+
+	float *** matriz = (float ***)calloc(t,sizeof(float**));
+	int i,j;
+	for (i=0; i<t; ++i)
+	{
+		matriz[i] = (float **)calloc(N,sizeof(float*));
+		for(j=0; j<N; j++)
+		{
+			matriz[i][j] = (float *)calloc(N,sizeof(float));
+		}
+	}
+
+
 	float valueA,valueB;
 	valueA = N*0.4;
 	valueB = N*0.6;
@@ -100,7 +114,8 @@ float *** crearBaseMatrizSinHebras(int N, int t)
 		for(j=(int)valueA+aux;j<(int)valueB;j++)
 		{
 			//printf("%d %d\n",i,j );
-			matriz[i][j][0]=20;
+			//matriz[i][j][0]=20;
+			matriz[0][i][j]=20;
 		}
 	}
 	
@@ -126,7 +141,7 @@ void* rellenar(void* thread)
 	int k = laHebra->t;
 	int i, j;
 	int p, q;
-	for (i =laHebra->X, p=0; p<laHebra->tamX; ++i,p++)
+	/*for (i =laHebra->X, p=0; p<laHebra->tamX; ++i,p++)
 	{
 		for (j = laHebra->Y, q=0; q<laHebra->tamY; ++j, q++)
 		{
@@ -143,7 +158,27 @@ void* rellenar(void* thread)
 				matriz[i][j][k] = matriz[i][j][k-1]-matriz[i][j][k-2] + (Ccuadrado*DtDdcuadrado)*(matriz[i+1][j][k-1] + matriz[i-1][j][k-1]+ matriz[i][j+1][k-1] + matriz[i][j-1][k-1] - 4*matriz[i][j][k-1]);
 			}
 		}
+	}*/
+
+	for (i =laHebra->X, p=0; p<laHebra->tamX; ++i,p++)
+	{
+		for (j = laHebra->Y, q=0; q<laHebra->tamY; ++j, q++)
+		{
+			if(i==0 || j==0 || i==NtamanioGrilla-1 || j==NtamanioGrilla-1)
+			{
+				matriz[k][i][j] = 0;
+			}
+			else if(k==1)
+			{	
+				matriz[k][i][j] = matriz[0][i][j] + ((Ccuadrado*DtDdcuadrado)/2)*(matriz[0][i+1][j] + matriz[0][i-1][j]+ matriz[0][i][j+1] + matriz[0][i][j-1]);
+			}
+			else
+			{
+				matriz[k][i][j] = matriz[k-1][i][j]-matriz[k-2][i][j] + (Ccuadrado*DtDdcuadrado)*(matriz[k-1][i+1][j] + matriz[k-1][i-1][j]+ matriz[k-1][i][j+1] + matriz[k-1][i][j-1] - 4*matriz[k-1][i][j]);
+			}
+		}
 	}
+
 	pthread_exit(NULL);
 }
 
@@ -185,7 +220,7 @@ void crearSalida(float*** matriz, int N, int t)
 {
 	//printf("Inicio crearSalida\n");
 
-	FILE* archivoSalida;
+	/*FILE* archivoSalida;
 	archivoSalida = fopen(fNombreArchivoSalida, "w");
 	
 	int i, j;
@@ -193,13 +228,23 @@ void crearSalida(float*** matriz, int N, int t)
 	{
 		for(j=0; j<N; j++)
 		{
-			fprintf(archivoSalida, "%.10f ", matriz[i][j][t]);
+			fprintf(archivoSalida, "%.20f ", matriz[t][i][j]);
 		}
 		fprintf(archivoSalida, "\n");
 	}
 	fclose(archivoSalida);
-
 	//printf("Fin crearSalida\n");
+*/
+	FILE* archivoSalida;
+	archivoSalida = fopen(fNombreArchivoSalida, "wb");
+	
+	int i;
+	for(i=0; i<N; ++i)
+	{
+		fwrite(matriz[t][i],N,sizeof(float),archivoSalida);
+	}
+	fclose(archivoSalida);
+	
 }
 
 int main(int argc, char **argv)
@@ -277,12 +322,12 @@ int main(int argc, char **argv)
 	}
 	if(HNumeroHebras<=0 || HNumeroHebras > 14)
 	{
-		printf("La cantidad de hebras debe ser mayor a 0 y menor a 14\n");
+		printf("La cantidad de hebras debe ser mayor a 0 y menor o igual a 14\n");
 		return 1;
 	}
 	if(TnumeroPasos<= 0 || TnumeroPasos > 8000)
 	{
-		printf("El numero de pasos debe ser mayor a 0 y menor a 8000\n");
+		printf("El numero de pasos debe ser mayor a 0 y menor o igual a 8000\n");
 		return 1;
 	}
 	if(fNombreArchivoSalida == NULL)
@@ -307,6 +352,7 @@ int main(int argc, char **argv)
 	void * ptr = NULL;
 
 	matriz = crearBaseMatrizSinHebras(NtamanioGrilla,TnumeroPasos);
+	//printf("CREAR\n");
 	
 	hebra** hebras = (hebra**)calloc(HNumeroHebras,sizeof(hebra*));
 	hebras = asignarVariables(NtamanioGrilla,hebras,HNumeroHebras);
@@ -315,6 +361,7 @@ int main(int argc, char **argv)
 
 	for(t=1;t<TnumeroPasos;t++)
 	{
+		//printf("HEBRA %d\n",t);
 		for(i=0; i<HNumeroHebras; i++)
 		{	
 			pthread_join(threads[i], &ptr);
@@ -327,6 +374,7 @@ int main(int argc, char **argv)
 		}
 	}
 
+	imprimirTraza(matriz,NtamanioGrilla,TnumeroPasos);
 	//imprimirSalida(matriz, NtamanioGrilla, tIteracionSalida);
 	crearSalida(matriz, NtamanioGrilla, tIteracionSalida);
 
