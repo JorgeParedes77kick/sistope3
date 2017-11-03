@@ -27,9 +27,6 @@ pthread_t* threads;
 clock_t tiempoInicio, tiempoFinal;
 double tiempoPrograma;
 
-clock_t tiempoInicioHebras, tiempoFinalHebras;
-double tiempoHebras;
-
 int NtamanioGrilla = 0;
 int TnumeroPasos = 0;
 int HNumeroHebras = 0;
@@ -207,8 +204,6 @@ void crearSalida(float*** matriz, int N, int t)
 
 int main(int argc, char **argv)
 {
-	tiempoInicio = clock();
-
 	int c;
 	/*if(argc!=10){
 		if(argc>10){
@@ -306,6 +301,8 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	tiempoInicio = clock();
+
 	int i, t;
 	void * ptr = NULL;
 
@@ -316,8 +313,6 @@ int main(int argc, char **argv)
 
 	threads = (pthread_t*) calloc(HNumeroHebras, sizeof(pthread_t));
 
-	tiempoInicioHebras = clock();
-
 	for(t=1;t<TnumeroPasos;t++)
 	{
 		for(i=0; i<HNumeroHebras; i++)
@@ -327,22 +322,17 @@ int main(int argc, char **argv)
 		
 		for(i=0; i<HNumeroHebras; i++)
 		{
-			//pthread_join(threads[i], &ptr);
 			hebras[i]->t=t;
 			pthread_create(&threads[i], NULL,rellenar,(void*)hebras[i]);
 		}
 	}
 
-	tiempoFinalHebras = clock();
-
-	imprimirSalida(matriz, NtamanioGrilla, tIteracionSalida);
+	//imprimirSalida(matriz, NtamanioGrilla, tIteracionSalida);
 	crearSalida(matriz, NtamanioGrilla, tIteracionSalida);
 
 	tiempoFinal = clock();
 	tiempoPrograma = (double)(tiempoFinal - tiempoInicio)/CLOCKS_PER_SEC;
-	tiempoHebras = (double)(tiempoFinalHebras - tiempoInicioHebras)/CLOCKS_PER_SEC;
 	printf("> TIEMPO EJECUCION PROGRAMA: %f\n", tiempoPrograma);
-	printf("> TIEMPO EJECUCION HEBRAS: %f\n", tiempoHebras); 
 
 	return 0;
 }
